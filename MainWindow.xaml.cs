@@ -59,13 +59,10 @@ namespace InstalledAppsViewer
 
             // Search in HKEY_CURRENT_USER
             FindInstalledApps(Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall"), installedApps);
-
             // Search in HKEY_LOCAL_MACHINE
             FindInstalledApps(Registry.LocalMachine.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall"), installedApps);
-
-            // Search in additional registry paths for Google applications
-            FindInstalledApps(Registry.CurrentUser.OpenSubKey(@"Software\Google"), installedApps);
-            FindInstalledApps(Registry.LocalMachine.OpenSubKey(@"Software\Google"), installedApps);
+            // Search in WOW6432Node
+            FindInstalledApps(Registry.LocalMachine.OpenSubKey(@"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"), installedApps);
 
             return installedApps;
         }
@@ -96,12 +93,18 @@ namespace InstalledAppsViewer
             }
         }
 
+
         private string GetExecutablePath(RegistryKey key)
         {
             var installLocation = key.GetValue("InstallLocation") as string;
             var uninstallString = key.GetValue("UninstallString") as string;
+              var displayIcon = key.GetValue("DisplayIcon") as string;
             if (!string.IsNullOrEmpty(installLocation))
             {
+                if (displayIcon.Contains(",0"))
+                {
+                    return displayIcon.Substring(0, displayIcon.Length - 2);
+                }
                 return installLocation;
             }
             else if (!string.IsNullOrEmpty(uninstallString))
