@@ -2,8 +2,14 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Windows;
+using System.Windows.Interop;
+using System.Windows.Media.Imaging;
+using System.Windows.Media;
 using Microsoft.Win32;
+
+
 
 namespace InstalledAppsViewer
 {
@@ -14,28 +20,27 @@ namespace InstalledAppsViewer
             InitializeComponent();
             PopulateInstalledApps();
         }
-        static string ExtractIcon(string path)
+        private ImageSource GetIconPath(string path)
         {
-            // Original path to the GoogleDriveFS.exe file
-            string exeFilePathWithIconIndex = @$"{path}";
+            return IconExtractor.Extract(path);      // Assuming you have an Image control named MyImageControl
 
-            // Extract the executable path from the string
-            string exeFilePath = path.GetDirectoryName(exeFilePathWithIconIndex);
+        }
+        public ImageSource ConvertStringIconPathToImageSource(string iconPath)
+        {
+            BitmapImage image = new BitmapImage();
+            image.BeginInit();
+            image.UriSource = new Uri(iconPath, UriKind.Absolute);
+            image.EndInit();
+            return image;
+        }
 
-            // Extract the icon from the .exe file
-            Icon icon = Icon.ExtractAssociatedIcon(exeFilePath);
-
-            if (icon != null)
-            {
-                // Convert the icon to a Bitmap
-                Bitmap bitmap = icon.ToBitmap();
-
-                // Save the Bitmap to a file in the current directory with .ico extension
-                string iconFilePath = path.Combine(AppDomain.CurrentDomain.BaseDirectory, "GoogleDriveFSIcon.ico");
-                bitmap.Save(iconFilePath, System.Drawing.Imaging.ImageFormat.Icon);
-
-                return iconFilePath;
-            }
+        private ImageSource ToImageSource(Icon icon)
+        {
+            // Converts an Icon to an ImageSource that can be used in WPF.
+            return Imaging.CreateBitmapSourceFromHIcon(
+                icon.Handle,
+                Int32Rect.Empty,
+                BitmapSizeOptions.FromEmptyOptions());
         }
 
         private void PopulateInstalledApps()
@@ -65,7 +70,7 @@ namespace InstalledAppsViewer
             return installedApps;
         }
 
-        private void FindInstalledApps(RegistryKey? key, List<AppInfo> installedApps)
+        private void FindInstalledApps(RegistryKey key, List<AppInfo> installedApps)
         {
             if (key != null)
             {
@@ -78,7 +83,7 @@ namespace InstalledAppsViewer
                         if ((publisher != null && (publisher.ToLower().Contains("google") || publisher.ToLower().Contains("google llc"))) ||
                             (displayName != null && displayName.ToLower().Contains("google")))
                         {
-                            string iconPath = ExtractIconPath(subKey);
+                            ImageSource iconPath = ExtractIconPath(subKey);
                             string executablePath = GetExecutablePath(subKey);
                             installedApps.Add(new AppInfo { Name = displayName, IconPath = iconPath, ExecutablePath = executablePath });
                         }
@@ -111,7 +116,7 @@ namespace InstalledAppsViewer
             return null;
         }
 
-        private string ExtractIconPath(RegistryKey key)
+        private ImageSource ExtractIconPath(RegistryKey key)
         {
             var displayIcon = key.GetValue("DisplayIcon") as string;
 
@@ -119,15 +124,13 @@ namespace InstalledAppsViewer
             {
                 if (displayIcon.Contains(",0"))
                 {
-                    int i = displayIcon.Length - 2;
-                    displayIcon = ExtractIcon(displayIcon.Substring(0, i));
-                    MessageBox.Show(displayIcon + " hi akash");
-                    return displayIcon;
+                    return GetIconPath(displayIcon.Substring(0, displayIcon.Length - 2));
                 }
 
-                return displayIcon;
+
+                return ConvertStringIconPathToImageSource(displayIcon);
             }
-            return string.Empty;
+            return null;
         }
 
         private void ExecuteApplication(string executablePath)
@@ -144,8 +147,6 @@ namespace InstalledAppsViewer
 
         private void TextBlock_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-
-
             var app = ((FrameworkElement)sender).DataContext as AppInfo;
             if (app != null)
             {
@@ -157,7 +158,7 @@ namespace InstalledAppsViewer
     public class AppInfo
     {
         public string Name { get; set; }
-        public string IconPath { get; set; }
+        public ImageSource IconPath { get; set; } // Changed from IconPath string to ImageSource
         public string ExecutablePath { get; set; }
     }
 }
