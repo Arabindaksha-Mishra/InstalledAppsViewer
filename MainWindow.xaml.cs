@@ -22,7 +22,7 @@ namespace InstalledAppsViewer
         }
         private ImageSource GetIconPath(string path)
         {
-            return IconExtractor.Extract(path);      // Assuming you have an Image control named MyImageControl
+            return IconExtractor.Extract(path);       // Assuming you have an Image control named MyImageControl
 
         }
         public ImageSource ConvertStringIconPathToImageSource(string iconPath)
@@ -156,6 +156,13 @@ namespace InstalledAppsViewer
                 ExecuteApplication(app.ExecutablePath);
             }
         }
+
+        private void appListBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+
+        }
+
+       
     }
 
     public class AppInfo
